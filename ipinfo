@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import sys
+from json import dumps
+from pathlib import Path
+from requests import get
+
+
+def main():
+    BUSCAR_TOKEN_EM = Path.joinpath(Path.home(), '.config', 'ipinfo.ini')
+    if not Path.exists(BUSCAR_TOKEN_EM):
+        print("\t\n Para usar esse script, é necessário ter api do ipinfo.io")
+        print("\t\n Cadastre-se no site, e coloque a api em %s" % BUSCAR_TOKEN_EM)
+        sys.exit(0)
+
+    token = open(BUSCAR_TOKEN_EM, mode='r').read()
+    if len(sys.argv) < 2:
+        print("""
+            \n\tUso: %s [IP ou AS] [SALVAR_PARA] \n
+            \n\tCaso "Salvar para" esteja vazio, imprime em stdout.
+        """ % sys.argv[0])
+        sys.exit(0)
+
+    infos = consultar(sys.argv[1], token)
+    formatado = dumps(infos, indent=4, sort_keys=True)
+    
+    if len(sys.argv) == 3:
+        with open(sys.argv[2], mode='w') as salvarJSON:
+            salvarJSON.write(formatado)
+    else:
+        print("\n\t\t Retorno da consulta: %s " % formatado)
+
+def consultar(ipouas, apibearer):
+    header_tok = {
+        "Authorization": "Bearer "+str(apibearer).rstrip(),
+        "Accept": "application/json"
+    }
+
+    ret = get("https://ipinfo.io/%s" % ipouas, headers=header_tok)
+    if ret.status_code != 200:
+        print("""
+            \n\t Consulta não realiazada, código http: %s
+            \n\t Retorno: \n\t %s
+        """ % (ret.status_code, ret.text))
+        sys.exit(1)
+
+    return ret.json()
+
+
+if __name__ == '__main__':
+    main()
