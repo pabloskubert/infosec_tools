@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+[ -z "$1" ] && echo -e "\n\t Use: $(basename $0) [MAC_ADDRESS]" && exit;
+
+MACADDRESS="$1"
+RESPONSE=$(curl -ks "https://api.macvendors.com/$MACADDRESS" -g)
+
+if [ "$RESPONSE" = "" ]; then
+
+	echo -e "\n\t Not found"
+else
+	echo -e "\n\t $RESPONSE"
+fi
